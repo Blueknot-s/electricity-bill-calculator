@@ -3,46 +3,88 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>전기요금 계산기</title>
+  <title>전기요금 계산기 | 1~3인가구 가전 사용량 기반</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: Arial, sans-serif; background: #f8f8f8; margin: 0; padding: 20px; max-width: 600px; margin: auto; }
+    body { font-family: 'Arial', sans-serif; max-width: 720px; margin: auto; padding: 20px; background: #f9f9f9; }
     h1 { text-align: center; color: #333; }
-    .container { background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    label, input, button { display: block; width: 100%; margin-bottom: 15px; font-size: 1rem; }
-    input { padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
-    button { padding: 10px; background-color: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
-    button:hover { background-color: #45a049; }
-    .result { margin-top: 20px; font-size: 1.2rem; text-align: center; }
+    label, select, input { display: block; margin: 10px 0; width: 100%; }
+    .result { font-weight: bold; margin-top: 20px; padding: 10px; background: #fffbe6; border-left: 4px solid #ffc107; }
+    canvas { margin-top: 20px; background: #fff; border-radius: 8px; }
+    .btn { padding: 10px; background: #007bff; color: #fff; border: none; cursor: pointer; width: 100%; border-radius: 5px; margin-top: 10px; }
+    .btn:hover { background: #0056b3; }
   </style>
 </head>
 <body>
+  <h1>1~3인가구 전기요금 계산기</h1>
 
-  <h1>전기요금 계산기</h1>
-  <div class="container">
-    <label for="usage">이번 달 사용량 (kWh):</label>
-    <input type="number" id="usage" placeholder="예: 350">
+  <label>가전제품 선택:</label>
+  <select id="appliance">
+    <option value="100">냉장고 (100W)</option>
+    <option value="900">에어컨 (900W)</option>
+    <option value="500">세탁기 (500W)</option>
+    <option value="200">TV (200W)</option>
+  </select>
 
-    <button onclick="calculate()">요금 계산하기</button>
+  <label>하루 사용 시간 (시간):</label>
+  <input type="number" id="hours" value="3">
 
-    <div class="result" id="result"></div>
-  </div>
+  <label>전월 사용량 (kWh):</label>
+  <input type="number" id="prevMonth" value="150">
+
+  <label>금월 사용량 (kWh):</label>
+  <input type="number" id="currMonth" value="200">
+
+  <button class="btn" onclick="calculateBill()">요금 계산하기</button>
+
+  <div class="result" id="resultBox"></div>
+
+  <canvas id="usageChart" width="400" height="200"></canvas>
 
   <script>
-    function calculate() {
-      const usage = Number(document.getElementById('usage').value);
-      let charge = 0;
+    function calcBill(kWh) {
+      if (kWh <= 200) return kWh * 93.3;
+      else if (kWh <= 400) return 200 * 93.3 + (kWh - 200) * 187.9;
+      else return 200 * 93.3 + 200 * 187.9 + (kWh - 400) * 280.6;
+    }
 
-      if (usage <= 200) {
-        charge = usage * 93.3;
-      } else if (usage <= 400) {
-        charge = 200 * 93.3 + (usage - 200) * 187.9;
-      } else {
-        charge = 200 * 93.3 + 200 * 187.9 + (usage - 400) * 280.6;
-      }
+    function calculateBill() {
+      const watt = Number(document.getElementById('appliance').value);
+      const hours = Number(document.getElementById('hours').value);
+      const prev = Number(document.getElementById('prevMonth').value);
+      const curr = Number(document.getElementById('currMonth').value);
 
-      document.getElementById('result').innerHTML = `예상 전기요금: <strong>${Math.round(charge).toLocaleString()} 원</strong>`;
+      const dailyUsage = (watt / 1000) * hours; // kWh/day
+      const monthlyUsage = dailyUsage * 30;
+      const bill = calcBill(curr);
+      const prevBill = calcBill(prev);
+
+      document.getElementById('resultBox').innerHTML = `
+        예상 월간 사용량: <strong>${monthlyUsage.toFixed(2)} kWh</strong><br>
+        이번 달 전기요금: <strong>${bill.toLocaleString()} 원</strong><br>
+        저번 달 대비 <strong>${(curr - prev) > 0 ? '증가' : '감소'}</strong> (${Math.abs(curr - prev)} kWh)
+      `;
+
+      const ctx = document.getElementById('usageChart').getContext('2d');
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['전월', '금월'],
+          datasets: [{
+            label: '사용량 (kWh)',
+            data: [prev, curr],
+            backgroundColor: ['#ff6384', '#36a2eb']
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'kWh' } }
+          }
+        }
+      });
     }
   </script>
-
 </body>
 </html>
